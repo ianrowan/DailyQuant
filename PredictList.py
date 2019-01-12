@@ -53,18 +53,18 @@ if __name__=='__main__':
         return PredictList(stock_list, device).log_builder()
 
     stocks = np.genfromtxt("/home/ian/SP500.csv", dtype=np.str, delimiter=',')
-    stocks1 = stocks[:75]
-    stocks2 = stocks[75:150]
-    stocks3 = stocks[150:225]
-    stocks4 = stocks[225:300]
-    stocks5 = stocks[300:350]
-    stocks6 = stocks[350:400]
-    stocks7 = stocks[400:450]
-    stocks8 = stocks[450:500]
+    stocks1 = stocks[:100]
+    stocks2 = stocks[100:200]
+    stocks3 = stocks[200:300]
+    stocks4 = stocks[300:400]
+    stocks5 = stocks[400:500]
+    #stocks6 = stocks[350:400]
+    #stocks7 = stocks[400:450]
+    #stocks8 = stocks[450:500]
     gpus = ["/GPU:0", "/GPU:0", "/GPU:0", "/GPU:0", "/GPU:1", "/GPU:1", "/GPU:1", "/GPU:1"]
-    with concurrent.futures.ThreadPoolExecutor(8) as executor:
-        results = [x for x in executor.map(create_list, [stocks1, stocks2, stocks3, stocks4, stocks5, stocks6, stocks7, stocks8], gpus)]
-    output = np.concatenate((results[0], results[1], results[2], results[3], results[4], results[5], results[6], results[7]), axis=0)
+    with concurrent.futures.ThreadPoolExecutor(5) as executor:
+        results = [x for x in executor.map(create_list, [stocks1, stocks2, stocks3, stocks4, stocks5], gpus)]
+    output = np.concatenate((results[0], results[1], results[2], results[3], results[4]), axis=0)
     '''
     output = PredictList(stocks[300:375]).log_builder()
     '''
