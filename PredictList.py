@@ -1,9 +1,11 @@
+import os
 import numpy as np
-from trainCNN import trainCnn
-import sys
+from trainCNN import TrainSingle, TrainOverall
+from datetime import datetime, timedelta
 import objgraph
 import concurrent.futures
-import gc
+dir_path = os.path.dirname(os.path.realpath(__file__))
+
 
 class PredictList:
 
@@ -12,7 +14,12 @@ class PredictList:
         self.device = device_name
 
     def predict_one(self, symbol, categories):
-        prediction = trainCnn(symbol, categories, self.device).train_predict_new(1800, 1e-4)
+        model_path = dir_path + "/TensorFlow/models/Full_model.ckpt"
+
+        if not os.path.exists(model_path) and os.path.getmtime(model_path) < (datetime.now() - timedelta(days=30)):
+            TrainOverall(self.stock_list, categories, True).train_full_network(30000, 1e-4, 4000, 0.5, model_path)
+
+        prediction = TrainSingle(symbol, categories, self.device).train_predict_new(2000, model_path)
         return np.argmax(prediction[0][0]), prediction[1]
 
     def all_stocks(self):
@@ -46,29 +53,30 @@ class PredictList:
         return output
 
 
-
-if __name__=='__main__':
+if __name__ == '__main__':
 
     def create_list(stock_list, device):
         return PredictList(stock_list, device).log_builder()
+#TODO: FIX GPU Memory Leak!!
 
-    stocks = np.genfromtxt("/home/ian/SP500.csv", dtype=np.str, delimiter=',')
-    stocks1 = stocks[:100]
-    stocks2 = stocks[100:200]
-    stocks3 = stocks[200:300]
-    stocks4 = stocks[300:400]
-    stocks5 = stocks[400:500]
+    stocks = np.genfromtxt(dir_path + "/SP500.csv", dtype=np.str, delimiter=',')
+
+    stocks1 = stocks[:250]
+    stocks2 = stocks[250:500]
+    #stocks3 = stocks[300:400]
+    #stocks4 = stocks[400:500]
+    #stocks5 = stocks[400:500]
     #stocks6 = stocks[350:400]
     #stocks7 = stocks[400:450]
     #stocks8 = stocks[450:500]
-    gpus = ["/GPU:0", "/GPU:0", "/GPU:0", "/GPU:0", "/GPU:1", "/GPU:1", "/GPU:1", "/GPU:1"]
-    with concurrent.futures.ThreadPoolExecutor(5) as executor:
-        results = [x for x in executor.map(create_list, [stocks1, stocks2, stocks3, stocks4, stocks5], gpus)]
-    output = np.concatenate((results[0], results[1], results[2], results[3], results[4]), axis=0)
-    '''
-    output = PredictList(stocks[300:375]).log_builder()
-    '''
+    gpus = ["/GPU:0", "/GPU:0"]
+    with concurrent.futures.ThreadPoolExecutor(2) as executor:
+        results = [x for x in executor.map(create_list, [stocks1, stocks2], gpus)]
+    output = np.concatenate((results[0], results[1]), axis=0)
+
+    #output = PredictList(stocks).log_builder()
+
     print(output)
 
-    np.savetxt("/home/ian/stock_report.csv", output, fmt="%s", delimiter=',')
+    np.savetxt(dir_path + "/stock_report.csv", output, fmt="%s", delimiter=',')
 
