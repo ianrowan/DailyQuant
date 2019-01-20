@@ -10,4 +10,6 @@ TensorFlow/models/*
 TensorFlow/Tensorboard/*
 data_array0.npy
 data_array1.npy
+index_data.npy
+stock_report.csv
 

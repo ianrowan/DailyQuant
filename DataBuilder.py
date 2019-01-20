@@ -13,8 +13,8 @@ class DataBuilder:
 
     def __init__(self, symbol, years, use_index=True, categorize=True, scale_full=False, scale_single=False, num_cats=5):
         self.endDate = datetime.now().date() - timedelta(days=1)
-        self.start = datetime(self.endDate.year - int(years), self.endDate.month, self.endDate.day) - timedelta(days=1)
-        self._apiKey = "af08d3cdca987b9b5f0101ca0a63984ce6ab03d0"
+        self.start = datetime(self.endDate.year - int(years), self.endDate.month, self.endDate.day)
+        self._apiKey = "602e6966866fa8667b139219e0592d809c2a6fa0"
         self.scale_single = scale_single
         self.stockData = pdata.get_data_tiingo(symbols=symbol.upper(), start=self.start, end=self.endDate,
                                                api_key=self._apiKey).as_matrix()[:, :5]
@@ -36,7 +36,7 @@ class DataBuilder:
 
     def _build_raw(self):
         for i in range(20, len(self.stockData)):
-            self.inputs[i-20:i] = self.stockData[i-20:i] if not self.scale_single else MinMaxScaler().fit_transform(self.stockData[i-20:i])
+            self.inputs[i - 20] = self.stockData[i-20:i] if not self.scale_single else MinMaxScaler().fit_transform(self.stockData[i-20:i])
             self.outputs[i - 20] = (self.stockData_out[i][0] - self.stockData_out[i - 1][0]) / self.stockData_out[i - 1][0]
 
     def adaptive_range(self, quantiles=4, show_dist=False):
@@ -57,7 +57,7 @@ class DataBuilder:
         outputs = np.zeros(shape=len(self.stockData) - 20)
         for i, point in enumerate(self.outputs):
             for j in range(len(self.ranges)-1):
-                if point >= self.ranges[j] and point < self.ranges[j+1]:
+                if self.ranges[j+1] > point >= self.ranges[j]:
                     outputs[i] = j
                     break
         return outputs
@@ -75,11 +75,14 @@ class DataBuilder:
 
     def get_save_index(self, scale=True):
         if os.path.isfile(dir_path + "/index_data.npy"):
+            if datetime.fromtimestamp(os.path.getctime(dir_path + "/index_data.npy")).date() != datetime.now().date():
+                input("Index Data is stale. Delete old index and re-run or press any key to continue....")
             index = np.load(dir_path + "/index_data.npy")
         else:
+            print("Refreshing Index Data")
             index = pdata.get_data_tiingo(symbols="DIA", start=self.start, end=self.endDate,
                           api_key=self._apiKey).as_matrix()[:, :5]
-            np.save(dir_path + "/home/ian/index_data", index)
+            np.save(dir_path + "/index_data", index)
         if scale:
             scaler = MinMaxScaler()
             index = scaler.fit_transform(index)
@@ -95,17 +98,4 @@ class DataBuilder:
         return np.concatenate((inputs, index), axis=3)
 
 
-
-'''
-d = DataBuilder("AMZN",5, categorize=False)
-
-print(d.adaptive_range(5, True))
-print(d.ranges)
-print(max(d.get_data()[1])*100)
-
-
-x = DataBuilder("AMZN", 5).get_recent_input()
-print(np.shape(x))
-print(x[:,:,:,0])
-'''
 
